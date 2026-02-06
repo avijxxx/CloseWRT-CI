@@ -107,3 +107,118 @@ if [ -d *"luci-app-netspeedtest"* ]; then
 
 	cd $PKG_PATH && echo "netspeedtest has been fixed!"
 fi
+
+#通用函数：从GitHub Releases下载文件到固件文件系统
+DOWNLOAD_RELEASE_FILE() {
+	local PKG_REPO=$1
+	local FILE_KEYWORD=$2
+	local TARGET_DIR=${3:-"/usr/bin"}
+	local COPY_FILES=$4
+
+	echo "======================="
+	echo "Downloading from $PKG_REPO releases..."
+
+	local API_URL="https://api.github.com/repos/$PKG_REPO/releases/latest"
+	local DOWNLOAD_URL=$(curl -sL $API_URL | grep "browser_download_url.*$FILE_KEYWORD" | cut -d '"' -f 4 | head -1)
+
+	if [ -z "$DOWNLOAD_URL" ]; then
+		echo "✗ Error: File matching '$FILE_KEYWORD' not found in latest release"
+		return 1
+	fi
+
+	local FILE_NAME=$(basename $DOWNLOAD_URL)
+	local TEMP_DIR="/tmp/release_download_$$"
+	mkdir -p $TEMP_DIR
+
+	echo "Downloading: $DOWNLOAD_URL"
+	wget -q -O "$TEMP_DIR/$FILE_NAME" "$DOWNLOAD_URL"
+
+	if [ $? -ne 0 ]; then
+		echo "✗ Error: Download failed"
+		rm -rf $TEMP_DIR
+		return 1
+	fi
+
+	local FILES_DIR="$GITHUB_WORKSPACE/wrt/files$TARGET_DIR"
+	mkdir -p "$FILES_DIR"
+
+	# 根据文件后缀自动判断是否需要解压
+	case "$FILE_NAME" in
+		*.zip)
+			echo "Extracting ZIP archive..."
+			local EXTRACT_DIR="$TEMP_DIR/extracted"
+			mkdir -p "$EXTRACT_DIR"
+			unzip -q "$TEMP_DIR/$FILE_NAME" -d "$EXTRACT_DIR"
+
+			if [ -n "$COPY_FILES" ]; then
+				echo "Copying specified files: $COPY_FILES"
+				for FILE_SPEC in $COPY_FILES; do
+					find "$EXTRACT_DIR" -type f -name "$FILE_SPEC" -exec cp {} "$FILES_DIR/" \;
+				done
+			else
+				echo "Copying all extracted files..."
+				find "$EXTRACT_DIR" -type f -exec cp {} "$FILES_DIR/" \;
+			fi
+			;;
+		*.tar.gz|*.tgz)
+			echo "Extracting TAR.GZ archive..."
+			local EXTRACT_DIR="$TEMP_DIR/extracted"
+			mkdir -p "$EXTRACT_DIR"
+			tar -xzf "$TEMP_DIR/$FILE_NAME" -C "$EXTRACT_DIR"
+
+			if [ -n "$COPY_FILES" ]; then
+				echo "Copying specified files: $COPY_FILES"
+				for FILE_SPEC in $COPY_FILES; do
+					find "$EXTRACT_DIR" -type f -name "$FILE_SPEC" -exec cp {} "$FILES_DIR/" \;
+				done
+			else
+				echo "Copying all extracted files..."
+				find "$EXTRACT_DIR" -type f -exec cp {} "$FILES_DIR/" \;
+			fi
+			;;
+		*.tar.bz2|*.tbz2)
+			echo "Extracting TAR.BZ2 archive..."
+			local EXTRACT_DIR="$TEMP_DIR/extracted"
+			mkdir -p "$EXTRACT_DIR"
+			tar -xjf "$TEMP_DIR/$FILE_NAME" -C "$EXTRACT_DIR"
+
+			if [ -n "$COPY_FILES" ]; then
+				echo "Copying specified files: $COPY_FILES"
+				for FILE_SPEC in $COPY_FILES; do
+					find "$EXTRACT_DIR" -type f -name "$FILE_SPEC" -exec cp {} "$FILES_DIR/" \;
+				done
+			else
+				echo "Copying all extracted files..."
+				find "$EXTRACT_DIR" -type f -exec cp {} "$FILES_DIR/" \;
+			fi
+			;;
+		*)
+			echo "Copying file directly (no extraction needed)..."
+			cp "$TEMP_DIR/$FILE_NAME" "$FILES_DIR/"
+			;;
+	esac
+
+	chmod +x "$FILES_DIR"/* 2>/dev/null
+	rm -rf $TEMP_DIR
+
+	echo "✓ Files installed to: $FILES_DIR"
+	ls -lh "$FILES_DIR"
+	echo "======================="
+}
+
+# 调用示例
+# DOWNLOAD_RELEASE_FILE "项目地址" "文件关键字" "目标路径(可选,默认/usr/bin)" "需要复制的文件名(空格分隔,留空则全部)"
+#
+# 注意：函数会根据文件后缀自动判断是否解压
+# - 压缩包格式：.zip / .tar.gz / .tgz / .tar.bz2 / .tbz2 → 自动解压
+# - 非压缩格式：.sh / .bin / .json / .conf 等 → 直接复制
+#
+# === 压缩包示例（自动解压） ===
+# 复制部分文件（第4参数指定文件名）：
+# DOWNLOAD_RELEASE_FILE "EasyTier/EasyTier" "easytier-linux-aarch64" "/usr/bin" "easytier-core easytier-cli"
+# 复制全部文件（第4参数留空）：
+# DOWNLOAD_RELEASE_FILE "SagerNet/sing-box" "sing-box-.*-linux-arm64.tar.gz" "/usr/bin" ""
+#
+# === 非压缩文件示例（直接复制） ===
+# DOWNLOAD_RELEASE_FILE "user/scripts" "install.sh" "/usr/sbin" ""
+DOWNLOAD_RELEASE_FILE "EasyTier/EasyTier" "easytier-linux-aarch64" "/usr/bin" "easytier-core easytier-cli"

@@ -59,7 +59,17 @@ UPDATE_PACKAGE "passwall" "Openwrt-Passwall/openwrt-passwall" "main" "pkg"
 UPDATE_PACKAGE "passwall2" "Openwrt-Passwall/openwrt-passwall2" "main" "pkg"
 
 UPDATE_PACKAGE "luci-app-tailscale" "asvow/luci-app-tailscale" "main"
-
+#mosdns
+find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+find ./ | grep Makefile | grep mosdns | xargs rm -f
+#git clone --depth=1 --single-branch https://github.com/QiuSimons/openwrt-mos openwrt-mos
+#cp -rf openwrt-mos/luci-app-mosdns ./luci-app-mosdns
+#cp -rf openwrt-mos/mosdns ./mosdns
+#cp -rf openwrt-mos/v2ray-geodata ./v2ray-geodata
+#rm -rf openwrt-mos
+git clone https://github.com/avijxxx/luci-app-mosdns -b v5 package/mosdns
+git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+echo "mosdns has been updated!"
 UPDATE_PACKAGE "ddns-go" "sirpdboy/luci-app-ddns-go" "main"
 UPDATE_PACKAGE "diskman" "lisaac/luci-app-diskman" "master"
 UPDATE_PACKAGE "easytier" "EasyTier/luci-app-easytier" "main"
