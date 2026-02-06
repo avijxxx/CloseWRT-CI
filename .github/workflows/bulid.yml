@@ -59,12 +59,7 @@ jobs:
           sudo chown $USER:$USER /mnt/build_wrt
           sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
 
-      - name: Install Rust Toolchain
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-          source "$HOME/.cargo/env"
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustc --version && cargo --version
+      
 
       - name: Initialization Values
         run: |
@@ -152,7 +147,9 @@ jobs:
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          
+          wget -O feeds/packages/lang/rust/Makefile https://raw.githubusercontent.com/immortalwrt/packages/refs/heads/master/lang/rust/Makefile
+
+
       - name: Custom Packages
         run: |
           cd ./wrt/package/
