@@ -145,7 +145,7 @@ jobs:
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-
+          sed -i 's/ci-llvm=true/ci-llvm=false/g' feeds/packages/lang/rust/Makefile
       - name: Custom Packages
         run: |
           cd ./wrt/package/
