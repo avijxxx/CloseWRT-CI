@@ -76,14 +76,14 @@ if [ -f "$TS_FILE" ]; then
 	cd $PKG_PATH && echo "tailscale has been fixed!"
 fi
 
-#修复Rust编译失败
-RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
-if [ -f "$RUST_FILE" ]; then
+#修复patch-kernel.sh删除.orig文件导致Rust校验失败
+PK_FILE="$GITHUB_WORKSPACE/wrt/scripts/patch-kernel.sh"
+if [ -f "$PK_FILE" ]; then
 	echo " "
 
-	sed -i 's/download-ci-llvm=true/download-ci-llvm=false/g' $RUST_FILE
+	sed -i '/Check for rejects/,/^fi$/d; /Remove backup files/,/\.orig.*-exec rm/d' "$PK_FILE"
 
-	cd $PKG_PATH && echo "rust has been fixed!"
+	cd $PKG_PATH && echo "patch-kernel.sh has been fixed!"
 fi
 
 #修复DiskMan编译失败
