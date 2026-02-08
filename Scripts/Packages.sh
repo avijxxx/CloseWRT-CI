@@ -75,7 +75,7 @@ find ./ | grep Makefile | grep mosdns | xargs rm -f
 #cp -rf openwrt-mos/mosdns ./mosdns
 #cp -rf openwrt-mos/v2ray-geodata ./v2ray-geodata
 #rm -rf openwrt-mos
-git clone https://github.com/avijxxx/luci-app-mosdns -b v5 package/mosdns
+git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 echo "mosdns has been updated!"
 UPDATE_PACKAGE "ddns-go" "sirpdboy/luci-app-ddns-go" "main"
