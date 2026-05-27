@@ -73,13 +73,13 @@ git clone https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-
 #mosdns
 find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
-#git clone --depth=1 --single-branch https://github.com/QiuSimons/openwrt-mos openwrt-mos
-#cp -rf openwrt-mos/luci-app-mosdns ./luci-app-mosdns
-#cp -rf openwrt-mos/mosdns ./mosdns
-#cp -rf openwrt-mos/v2ray-geodata ./v2ray-geodata
-#rm -rf openwrt-mos
-git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
-git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+git clone --depth=1 --single-branch https://github.com/QiuSimons/openwrt-mos openwrt-mos
+cp -rf openwrt-mos/luci-app-mosdns ./luci-app-mosdns
+cp -rf openwrt-mos/mosdns ./mosdns
+cp -rf openwrt-mos/v2ray-geodata ./v2ray-geodata
+rm -rf openwrt-mos
+#git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+#git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 echo "mosdns has been updated!"
 UPDATE_PACKAGE "ddns-go" "sirpdboy/luci-app-ddns-go" "main"
 UPDATE_PACKAGE "diskman" "sbwml/luci-app-diskman" "main"
@@ -87,7 +87,7 @@ UPDATE_PACKAGE "diskmanager" "4IceG/luci-app-mini-diskmanager" "main"
 UPDATE_PACKAGE "easytier" "EasyTier/luci-app-easytier" "main"
 UPDATE_PACKAGE "fancontrol" "rockjake/luci-app-fancontrol" "main"
 UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main"
-UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
+#UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
 UPDATE_PACKAGE "netspeedtest" "sirpdboy/netspeedtest" "main" "" "homebox ookla-speedtest"
 UPDATE_PACKAGE "netwizard" "sirpdboy/luci-app-netwizard" "main"
 UPDATE_PACKAGE "openlist2" "sbwml/luci-app-openlist2" "main"
