@@ -1,44 +1,71 @@
-#OpenWRT固件编译
-name: Build OpenWRT
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 VIKINGYFY
 
-#CI计划
+#云编译公用核心
+name: WRT-CORE
+
 on:
-  #手动触发
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      PACKAGE:
-        description: '手动添加的额外软件包\n逗号分隔'
+      WRT_CONFIG:
+        required: true
+        type: string
+      WRT_THEME:
+        required: true
+        type: string
+      WRT_NAME:
+        required: true
+        type: string
+      WRT_SSID:
+        required: true
+        type: string
+      WRT_WORD:
+        required: true
+        type: string
+      WRT_IP:
+        required: true
+        type: string
+      WRT_PW:
+        required: true
+        type: string
+      WRT_REPO:
+        required: true
+        type: string
+      WRT_BRANCH:
+        required: true
+        type: string
+      WRT_SOURCE:
+        required: true
+        type: string
+      WRT_PACKAGE:
         required: false
         type: string
-      checkout:
-        description: '回滚到commit id'
+      WRT_TEST:
         required: false
+        type: string
+
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-  checkout: ${{ github.event.inputs.checkout }}
-  TZ: Asia/Shanghai
+  WRT_CONFIG: ${{inputs.WRT_CONFIG}}
+  WRT_THEME: ${{inputs.WRT_THEME}}
+  WRT_NAME: ${{inputs.WRT_NAME}}
+  WRT_SSID: ${{inputs.WRT_SSID}}
+  WRT_WORD: ${{inputs.WRT_WORD}}
+  WRT_IP: ${{inputs.WRT_IP}}
+  WRT_PW: ${{inputs.WRT_PW}}
+  WRT_REPO: ${{inputs.WRT_REPO}}
+  WRT_BRANCH: ${{inputs.WRT_BRANCH}}
+  WRT_SOURCE: ${{inputs.WRT_SOURCE}}
+  WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
+  WRT_TEST: ${{inputs.WRT_TEST}}
 
-#CI权限
-permissions: write-all
-
-#CI任务
 jobs:
-  build:
-    name: 编译固件
+  core:
+    name: ${{inputs.WRT_SOURCE}}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Projects
         uses: actions/checkout@main
-
-      - name: Delete old Releases and Workflows
-        uses: ophub/delete-releases-workflows@main
-        with:
-          gh_token: ${{secrets.GITHUB_TOKEN}}
-          delete_releases: true
-          releases_keep_latest: 0
-          delete_tags: true
-          delete_workflows: true
-          workflows_keep_day: 0
 
       - name: Initialization Environment
         env:
@@ -50,7 +77,7 @@ jobs:
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
-          sudo -E apt -yqq install dos2unix python3-netifaces libfuse-dev
+          sudo -E apt -yqq install dos2unix libfuse-dev
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
@@ -59,25 +86,13 @@ jobs:
           sudo chown $USER:$USER /mnt/build_wrt
           sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
 
-      
-
       - name: Initialization Values
         run: |
           echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
           echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
-          echo "WRT_CONFIG=MT7986" >> $GITHUB_ENV
-          echo "WRT_THEME=aurora" >> $GITHUB_ENV
-          echo "WRT_NAME=CWRT" >> $GITHUB_ENV
-          echo "WRT_SSID_2G=123123_2.4" >> $GITHUB_ENV
-          echo "WRT_SSID_5G=123123" >> $GITHUB_ENV
-          echo "WRT_WORD=88896825" >> $GITHUB_ENV
-          echo "WRT_IP=192.168.10.12" >> $GITHUB_ENV
-          echo "WRT_PW=无" >> $GITHUB_ENV
-          echo "WRT_REPO=https://github.com/padavanonly/immortalwrt-mt798x-6.6" >> $GITHUB_ENV
-          echo "WRT_BRANCH=openwrt-24.10-6.6" >> $GITHUB_ENV
-          WRT_INFO_RAW="padavanonly/immortalwrt-mt798x-6.6"
-          echo "WRT_INFO=${WRT_INFO_RAW//\//-}" >> $GITHUB_ENV
-          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/MT7986.txt)" >> $GITHUB_ENV
+          echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
+          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
+          echo "WRT_WIFI=wifi-yes" >> $GITHUB_ENV
           echo "WRT_KVER=none" >> $GITHUB_ENV
           echo "WRT_LIST=none" >> $GITHUB_ENV
 
@@ -85,12 +100,8 @@ jobs:
         run: |
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
 
-          cd ./wrt/
-          if [ "$checkout" != "" ]; then
-            git fetch --depth=1 origin $checkout
-            git checkout $checkout
-          fi
-          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+
           # 如果不存在 defconfig 则直接结束工作流
           if [ ! -d "defconfig" ]; then
             echo "defconfig directory not found, stopping workflow."
@@ -109,6 +120,7 @@ jobs:
 
       - name: Check Caches
         id: check-cache
+        if: env.WRT_TEST != 'true'
         uses: actions/cache@main
         with:
           key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
@@ -119,6 +131,7 @@ jobs:
             ./wrt/staging_dir/tool*
 
       - name: Update Caches
+        if: env.WRT_TEST != 'true'
         run: |
           if [ -d "./wrt/staging_dir" ]; then
             find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
@@ -148,7 +161,6 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-
       - name: Custom Packages
         run: |
           cd ./wrt/package/
@@ -160,34 +172,29 @@ jobs:
         run: |
           cd ./wrt/
 
-          cat $GITHUB_WORKSPACE/Config/MT7986.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
+          if [[ "${WRT_CONFIG,,}" == *"test"* ]]; then
+            cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt >> .config
+          else
+            cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
+          fi
 
           $GITHUB_WORKSPACE/Scripts/Settings.sh
 
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
       - name: Download Packages
+        if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
           make download -j$(nproc)
 
       - name: Compile Firmware
+        if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
           make -j$(nproc) || make -j1 V=s
-
-      - name: Verify Custom Files
-        run: |
-          cd ./wrt/
-
-          if [ -d "./files/usr/bin" ]; then
-            echo "======================="
-            echo "Custom files in /usr/bin:"
-            ls -lh ./files/usr/bin/
-            echo "======================="
-          fi
 
       - name: Machine Information
         run: |
@@ -207,21 +214,23 @@ jobs:
 
           cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
 
-          echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
-          echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
+          if [[ $WRT_TEST != 'true' ]]; then
+            echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
+            echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
 
-          find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+            find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
 
-          for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-            EXT=$(basename $FILE | cut -d '.' -f 2-)
-            NAME=$(basename $FILE | cut -d '.' -f 1 | sed 's/.*filogic-[^_]*_//')
-            NEW_FILE="$NAME"-"$WRT_DATE"."$EXT"
-            mv -f $FILE ./upload/$NEW_FILE
-          done
+            for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
+              EXT=$(basename $FILE | cut -d '.' -f 2-)
+              NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
+              NEW_FILE="$NAME"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_WIFI"-"$WRT_DATE"."$EXT"
+              mv -f $FILE ./upload/$NEW_FILE
+            done
 
-          find ./bin/targets/ -type f -exec mv -f  ./upload/ \;
+            find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
 
-          make clean -j$(nproc)
+            make clean -j$(nproc)
+          fi
 
       - name: Release Firmware
         uses: softprops/action-gh-release@master
@@ -229,11 +238,11 @@ jobs:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
           body: |
-            这是各平台固件，包含内核和设备树
-            请注意选择您需要的设备固件！
-            不要问！刷就完事了！
+            这是个平台固件包，内含多个设备！
+            请注意选择你需要的设备固件！
+            不要问，刷就完事了！
 
-            全系开源硬件加速，爽翻了！
+            全系带闭源硬件加速，别问了！
 
             源码：${{env.WRT_REPO}}
             分支：${{env.WRT_BRANCH}}
@@ -245,8 +254,7 @@ jobs:
             登录地址：${{env.WRT_IP}}
             登录密码：${{env.WRT_PW}}
 
-            2.4G WIFI名称：${{env.WRT_SSID_2G}}
-            5G WIFI名称：${{env.WRT_SSID_5G}}
+            WIFI名称：${{env.WRT_SSID}}
             WIFI密码：${{env.WRT_WORD}}
 
             内核版本：${{env.WRT_KVER}}

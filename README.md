@@ -1,12 +1,14 @@
 # CloseWRT-CI
 
-PADAVANONLY-24.10源码：
+源码：
 
-https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
+https://github.com/chasey-dev/immortalwrt-mt798x-rebase.git
+
+https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly.git
 
 # U-BOOT
 
-闭源固件UBOOT：
+全新UBOOT支持开源和闭源固件：
 
 https://github.com/VIKINGYFY/UBOOT-CI/releases
 
@@ -16,7 +18,7 @@ https://github.com/VIKINGYFY/UBOOT-CI/releases
 
 # 固件简要说明
 
-固件每天早上4点自动编译。
+固件每周一早上5点自动编译。
 
 固件信息里的时间为编译开始的时间，方便核对上游源码提交时间。
 
