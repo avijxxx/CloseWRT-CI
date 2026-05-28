@@ -187,9 +187,9 @@ jobs:
         run: |
           # files/ 注入到 wrt/files/，编译时将被打进固件
           if [ -d "$GITHUB_WORKSPACE/files" ]; then
-            mkdir -p ./files
-            cp -rf "$GITHUB_WORKSPACE/files/." ./files/
-            chmod +x ./files/etc/uci-defaults/*.sh 2>/dev/null || true
+            mkdir -p ./wrt/files
+            cp -rf "$GITHUB_WORKSPACE/files/." ./wrt/files/
+            chmod +x ./wrt/files/etc/uci-defaults/*.sh 2>/dev/null || true
             echo "custom files injected"
           fi
 
