@@ -183,6 +183,16 @@ jobs:
 
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
+      - name: Inject Custom Files
+        run: |
+          # files/ 注入到 wrt/files/，编译时将被打进固件
+          if [ -d "$GITHUB_WORKSPACE/files" ]; then
+            mkdir -p ./files
+            cp -rf "$GITHUB_WORKSPACE/files/." ./files/
+            chmod +x ./files/etc/uci-defaults/*.sh 2>/dev/null || true
+            echo "custom files injected"
+          fi
+
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
@@ -229,30 +239,6 @@ jobs:
             done
 
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
-
-            # 单独提取 sing-box ipk + 原始二进制随 Release 发布（不进固件）
-            for IPK in $(find ./bin/packages/ -type f -name "sing-box*.ipk" 2>/dev/null); do
-              cp -f "$IPK" ./upload/
-
-              TMP_DIR=$(mktemp -d)
-              cp "$IPK" "$TMP_DIR/pkg.ipk"
-              (
-                cd "$TMP_DIR"
-                ar x pkg.ipk 2>/dev/null
-                if [ -f data.tar.gz ]; then
-                  tar -xzf data.tar.gz 2>/dev/null
-                elif [ -f data.tar.xz ]; then
-                  tar -xJf data.tar.xz 2>/dev/null
-                elif [ -f data.tar.zst ]; then
-                  zstd -d -c data.tar.zst | tar -xf - 2>/dev/null
-                fi
-              )
-              if [ -f "$TMP_DIR/usr/bin/sing-box" ]; then
-                SB_VER=$(basename "$IPK" | sed -E 's/^sing-box[_-]([^_]+)_.*/\1/')
-                cp -f "$TMP_DIR/usr/bin/sing-box" "./upload/sing-box-${SB_VER}-${WRT_TARGET}"
-              fi
-              rm -rf "$TMP_DIR"
-            done
 
             make clean -j$(nproc)
           fi

@@ -1,0 +1,62 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# 首次启动自动添加 moetayuko/openwrt-passwall-build 的 passwall feed
+# 用于在线安装 sing-box / xray / hysteria 等核心组件，减小固件体积
+
+. /etc/openwrt_release 2>/dev/null || exit 1
+
+ARCH="${DISTRIB_ARCH}"
+RELEASE="${DISTRIB_RELEASE%.*}"  # 24.10.0 → 24.10
+
+BASE_URL="https://master.dl.sourceforge.net/project/openwrt-passwall-build"
+
+if command -v apk >/dev/null 2>&1; then
+  # === APK (OpenWrt 25.12+ / snapshots) ===
+  KEY_FILE="/etc/apk/keys/openwrt-passwall-build.pem"
+  if [ ! -f "$KEY_FILE" ]; then
+    wget -q -O "$KEY_FILE" "$BASE_URL/apk.pub" 2>/dev/null || true
+  fi
+
+  CONF="/etc/apk/repositories.d/customfeeds.list"
+  : > "$CONF"  # 清空重建
+
+  if [ -n "$RELEASE" ]; then
+    SUBPATH="releases/packages-$RELEASE"
+  else
+    SUBPATH="snapshots/packages"
+  fi
+
+  for feed in passwall_luci passwall_packages passwall2; do
+    echo "$BASE_URL/$SUBPATH/$ARCH/$feed/packages.adb" >> "$CONF"
+  done
+
+  apk update 2>/dev/null || true
+
+else
+  # === OPKG (OpenWrt 24.10 及更早) ===
+  # 导入公钥
+  wget -q -O /tmp/ipk.pub "$BASE_URL/ipk.pub" 2>/dev/null || true
+  if [ -f /tmp/ipk.pub ]; then
+    opkg-key add /tmp/ipk.pub 2>/dev/null || true
+    rm -f /tmp/ipk.pub
+  fi
+
+  CONF="/etc/opkg/customfeeds.conf"
+  # 清理旧条目（只清自己维护的）
+  sed -i '/openwrt-passwall-build/d' "$CONF" 2>/dev/null || true
+
+  if [ -n "$RELEASE" ]; then
+    SUBPATH="releases/packages-$RELEASE"
+  else
+    SUBPATH="snapshots/packages"
+  fi
+
+  for feed in passwall_luci passwall_packages passwall2; do
+    echo "src/gz $feed $BASE_URL/$SUBPATH/$ARCH/$feed" >> "$CONF"
+  done
+
+  opkg update 2>/dev/null || true
+fi
+
+# 标记完成，避免重复执行
+exit 0
